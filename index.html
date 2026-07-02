@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Caja Familiar">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#14120E">
+<title>Caja Familiar</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
+}
+</script>
+<style>
+:root{--bg:#14120E;--surface:#211E18;--border:#37332A;--text:#F4F1E9;--muted:#9C9686;--gasto:#FF7A52;--ingreso:#3FCB88}*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.app{max-width:430px;margin:0 auto;min-height:100dvh;padding:20px;display:flex;flex-direction:column}.top{display:flex;justify-content:flex-end;margin-bottom:14px}.ghost{background:none;border:0;color:var(--muted);font-size:22px;padding:8px}.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#0006;padding:5px;border-radius:18px;margin-bottom:22px}.seg button{border:0;border-radius:14px;padding:14px;font-size:16px;font-weight:700;background:transparent;color:var(--muted)}.seg .active.gasto{background:var(--gasto);color:#14120E}.seg .active.ingreso{background:var(--ingreso);color:#14120E}.label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 7px 2px}.chips{display:flex;gap:8px;overflow:auto;padding-bottom:6px;margin-bottom:20px}.chip{white-space:nowrap;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:999px;padding:9px 14px;font-weight:600}.chip.active.gasto{background:var(--gasto);border-color:var(--gasto);color:#14120E}.chip.active.ingreso{background:var(--ingreso);border-color:var(--ingreso);color:#14120E}.field{margin-bottom:20px}input{width:100%;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:18px;padding:15px;font-size:17px;outline:none}#amount{text-align:right;font-size:34px;font-weight:700;color:var(--accent)}.accept{margin-top:auto;border:0;border-radius:18px;padding:16px;font-size:17px;font-weight:800;background:var(--accent);color:#14120E}.accept:disabled{opacity:.35}.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}.month{display:flex;align-items:center;justify-content:center;gap:18px;color:var(--muted);text-transform:uppercase;font-size:13px;margin:20px 0}.month button{border:0;background:#ffffff08;color:var(--muted);border-radius:999px;width:34px;height:34px}.balance{font-size:56px;font-weight:800;margin:8px 0 28px}.cards{display:flex;gap:12px;width:100%}.card{flex:1;border-radius:18px;padding:16px;text-align:center;background:var(--surface);border:1px solid var(--border)}.new{width:100%;border:0;border-radius:18px;padding:16px;font-size:16px;font-weight:800;background:var(--text);color:#14120E}.list{overflow:auto}.day{color:var(--muted);font-size:11px;text-transform:uppercase;margin:18px 0 6px}.row{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-bottom:0;background:var(--surface);padding:12px}.row:first-of-type{border-radius:14px 14px 0 0}.row:last-of-type{border-bottom:1px solid var(--border);border-radius:0 0 14px 14px}.row.one{border-radius:14px;border-bottom:1px solid var(--border)}.concept{flex:1;min-width:0}.concept b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.concept span{color:var(--muted);font-size:12px}.money{font-weight:800}.del{border:0;background:transparent;color:#777;font-size:16px}.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div id="app" class="app"></div>
+<script>
+const DEFAULT_CATS={gasto:["Casa","Comida","Transporte","Ocio","Salud","Otros"],ingreso:["Salario","Extra","Otros"]};
+const MONTHS=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const fmt=n=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
+let tx=JSON.parse(localStorage.getItem('fb_transactions')||'[]');
+let cats=JSON.parse(localStorage.getItem('fb_categories')||JSON.stringify(DEFAULT_CATS));
+let view='entry', type='gasto', category=cats.gasto[0], cursor={y:new Date().getFullYear(),m:new Date().getMonth()};
+const app=document.getElementById('app');
+function save(){localStorage.setItem('fb_transactions',JSON.stringify(tx));localStorage.setItem('fb_categories',JSON.stringify(cats));}
+function accent(){return type==='ingreso'?'#3FCB88':'#FF7A52'}
+function monthTx(){return tx.filter(t=>{let d=new Date(t.date);return d.getFullYear()===cursor.y&&d.getMonth()===cursor.m}).sort((a,b)=>new Date(b.date)-new Date(a.date))}
+function totals(){let m=monthTx(), ing=m.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0), gas=m.filter(t=>t.type==='gasto').reduce((s,t)=>s+t.amount,0);return{ing,gas,balance:ing-gas}}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function render(){app.style.setProperty('--accent',accent()); if(view==='entry') entry(); if(view==='dashboard') dashboard(); if(view==='settings') settings();}
+function entry(){app.innerHTML=`<div class="top"><button class="ghost" onclick="view='dashboard';render()">📊</button></div><div class="seg"><button class="${type==='gasto'?'active gasto':''}" onclick="type='gasto';category=cats.gasto[0];render()">Gasto</button><button class="${type==='ingreso'?'active ingreso':''}" onclick="type='ingreso';category=cats.ingreso[0];render()">Ingreso</button></div><div class="label">Familia</div><div class="chips">${cats[type].map(c=>`<button class="chip ${c===category?'active '+type:''}" onclick="category='${esc(c)}';render()">${esc(c)}</button>`).join('')}<button class="chip" onclick="addCat()">+</button></div><div class="field"><div class="label">Concepto</div><input id="concept" placeholder="¿En qué ha sido?"></div><div class="field"><div class="label">Importe</div><input id="amount" inputmode="decimal" placeholder="0,00"></div><button id="ok" class="accept" onclick="submit()">Aceptar</button>`;document.getElementById('concept').focus();}
+function submit(){let concept=document.getElementById('concept').value.trim();let amount=parseFloat(document.getElementById('amount').value.replace(',','.'));if(!concept||!amount||amount<=0)return;tx.unshift({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),type,concept,amount,category,date:new Date().toISOString()});save();view='dashboard';render()}
+function addCat(){let n=prompt('Nombre de la nueva familia');if(!n)return;n=n.trim();if(!n)return;if(!cats[type].includes(n))cats[type].push(n);category=n;save();render()}
+function changeMonth(d){cursor.m+=d;if(cursor.m<0){cursor.m=11;cursor.y--}if(cursor.m>11){cursor.m=0;cursor.y++}render()}
+function dashboard(){let t=totals();let col=t.balance>=0?'#3FCB88':'#FF7A52';app.innerHTML=`<div class="top"><button class="ghost" onclick="view='settings';render()">⚙️</button></div><div class="month"><button onclick="changeMonth(-1)">‹</button><span>${MONTHS[cursor.m]} ${cursor.y}</span><button onclick="changeMonth(1)">›</button></div><div class="center"><div class="label">Balance del mes</div><div class="balance" style="color:${col}">${t.balance<0?'−':''}${fmt(Math.abs(t.balance))} €</div><div class="cards"><div class="card"><div class="label" style="color:#3FCB88">Ingresos</div><b style="color:#3FCB88">${fmt(t.ing)} €</b></div><div class="card"><div class="label" style="color:#FF7A52">Gastos</div><b style="color:#FF7A52">${fmt(t.gas)} €</b></div></div></div><button class="new" onclick="view='entry';render()">+ Nuevo movimiento</button>`}
+function settings(){let m=monthTx();let html=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><button class="ghost" onclick="view='dashboard';render()">‹</button><b>Movimientos</b></div><div class="month"><button onclick="changeMonth(-1)">‹</button><span>${MONTHS[cursor.m]} ${cursor.y}</span><button onclick="changeMonth(1)">›</button></div><div class="list">`;if(!m.length)html+=`<p style="text-align:center;color:var(--muted)">Sin movimientos este mes.</p>`;let cur='';m.forEach((r,i)=>{let d=new Date(r.date).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'});if(d!==cur){cur=d;html+=`<div class="day">${d}</div>`}let col=r.type==='ingreso'?'#3FCB88':'#FF7A52';html+=`<div class="row one" style="border-left:4px solid ${col}"><div class="concept"><b>${esc(r.concept)}</b><span>${esc(r.category)}</span></div><div class="money" style="color:${col}">${r.type==='ingreso'?'+':'−'}${fmt(r.amount)} €</div><button class="del" onclick="removeTx('${r.id}')">🗑</button></div>`});app.innerHTML=html+`</div>`}
+function removeTx(id){if(confirm('¿Eliminar movimiento?')){tx=tx.filter(t=>t.id!==id);save();render()}}
+render();
+</script>
+</body>
+</html>
